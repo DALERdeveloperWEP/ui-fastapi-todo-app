@@ -1,7 +1,7 @@
 
 import { AuthResponse } from './types';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'https://fastapi-todo-1-afic.onrender.com';
 
 const getHeaders = (isMultipart = false) => {
   const token = localStorage.getItem('access_token');

@@ -37,7 +37,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   ];
 
   if (user?.role === 'admin') {
+    navLinks.splice(1, 1)
+    navLinks.splice(0, 1)
     navLinks.push({ name: 'Admin', path: '/admin', icon: 'fa-user-shield' });
+  }
+  else{
+    navLinks.splice(2, 1)
+    
   }
 
   return (

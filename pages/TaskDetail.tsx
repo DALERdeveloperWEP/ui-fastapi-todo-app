@@ -22,7 +22,24 @@ export default function TaskDetail() {
     setLoading(true);
     try {
       const taskData = await api.getTask(parseInt(id));
-      setTask(taskData);
+      setTask(taskData);;
+
+      // 2. Subtasks (user_subtasks endpoint BOR)
+      const subtaskData = await api.getSubtasks(taskData.task_id);
+      setSubtasks(
+        subtaskData.filter(
+          (st: SubTaskResponse) => st.task_id === taskData.task_id
+        )
+      );
+
+      // 3. Attachments (user_attechments endpoint BOR)
+      const attachmentData = await api.getUserAttachments();
+      setAttachments(
+        attachmentData.filter(
+          (att: AttachmentResponse) => att.task_id === taskData.task_id
+        )
+      );
+
       // Backend note: prompt said subtasks/attachments must be fetched via OWN endpoints using task_id
       // Assuming a search or filter endpoint exists or we iterate if not listed. 
       // Given endpoints: POST /api/subtask, GET /api/subtask/{id}, etc.
@@ -53,6 +70,7 @@ export default function TaskDetail() {
     if (!task) return;
     try {
       await api.createSubtask({
+        user_id: task.user_id,
         name: subtaskName,
         description: subtaskDesc,
         task_id: task.task_id
@@ -66,13 +84,18 @@ export default function TaskDetail() {
   const uploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !task) return;
+
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('task_id', task.task_id.toString());
+    formData.append("att_file", file);
+    formData.append("task_id", task.task_id.toString());
+
     try {
       await api.createAttachment(formData);
-      loadAll();
-    } catch (err) { alert('Failed to upload'); }
+      loadAll(); // qayta yuklash
+    } catch (err) {
+      alert("Failed to upload file");
+      console.error(err);
+    }
   };
 
   if (loading) return <div className="p-8 text-center"><i className="fa-solid fa-spinner fa-spin text-3xl text-blue-500"></i></div>;
@@ -152,59 +175,131 @@ export default function TaskDetail() {
           </div>
 
           {activeTab === 'subtasks' ? (
-            <div className="space-y-6">
-              <div className="space-y-3">
-                {subtasks.length === 0 ? (
-                  <p className="text-center py-8 text-gray-400 text-sm">No subtasks yet.</p>
-                ) : (
-                  subtasks.map(st => (
-                    <div key={st.sub_task_id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition">
-                      <div>
-                        <h4 className="font-bold text-gray-900">{st.name}</h4>
-                        <p className="text-sm text-gray-500">{st.description}</p>
-                      </div>
-                      <button onClick={async () => { await api.deleteSubtask(st.sub_task_id); loadAll(); }} className="text-gray-300 hover:text-red-500">
-                        <i className="fa-solid fa-circle-xmark"></i>
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-              <form onSubmit={addSubtask} className="bg-gray-50 p-4 rounded-xl space-y-3">
-                <h4 className="text-sm font-bold text-gray-700">Add Subtask</h4>
-                <input required placeholder="Subtask name" className="w-full p-2 border rounded-lg" value={subtaskName} onChange={e => setSubtaskName(e.target.value)} />
-                <textarea placeholder="Optional description" className="w-full p-2 border rounded-lg" value={subtaskDesc} onChange={e => setSubtaskDesc(e.target.value)} />
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">Add</button>
-              </form>
+  /* ================= SUBTASKS TAB ================= */
+  <div className="space-y-6">
+    <div className="space-y-3">
+      {subtasks.length === 0 ? (
+        <p className="text-center py-8 text-gray-400 text-sm">
+          No subtasks yet.
+        </p>
+      ) : (
+        subtasks.map((st) => (
+          <div
+            key={st.sub_task_id}
+            className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition"
+          >
+            <div>
+              <h4 className="font-bold text-gray-900">{st.name}</h4>
+              {st.description && (
+                <p className="text-sm text-gray-500">{st.description}</p>
+              )}
             </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {attachments.length === 0 ? (
-                  <p className="col-span-2 text-center py-8 text-gray-400 text-sm">No attachments yet.</p>
-                ) : (
-                  attachments.map(att => (
-                    <div key={att.attechment_id} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-lg">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <i className="fa-solid fa-file text-blue-500"></i>
-                        <span className="text-sm font-medium truncate">{att.file_path.split('/').pop()}</span>
-                      </div>
-                      <button onClick={async () => { await api.deleteAttachment(att.attechment_id); loadAll(); }} className="text-red-400 hover:text-red-600">
-                        <i className="fa-solid fa-trash-can text-sm"></i>
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div className="flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-8 hover:bg-gray-50 transition">
-                <label className="cursor-pointer text-center">
-                  <i className="fa-solid fa-cloud-arrow-up text-3xl text-gray-300 mb-2"></i>
-                  <p className="text-sm text-gray-500 font-medium">Click to upload files</p>
-                  <input type="file" className="hidden" onChange={uploadAttachment} />
-                </label>
-              </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await api.deleteSubtask(st.sub_task_id);
+                loadAll();
+              }}
+              className="text-gray-300 hover:text-red-500"
+              title="Delete subtask"
+            >
+              <i className="fa-solid fa-circle-xmark"></i>
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+
+    {/* ADD SUBTASK FORM */}
+    <form
+      onSubmit={addSubtask}
+      className="bg-gray-50 p-4 rounded-xl space-y-3"
+    >
+      <h4 className="text-sm font-bold text-gray-700">Add Subtask</h4>
+
+      <input
+        required
+        type="text"
+        placeholder="Subtask name"
+        className="w-full p-2 border rounded-lg"
+        value={subtaskName}
+        onChange={(e) => setSubtaskName(e.target.value)}
+      />
+
+      <textarea
+        placeholder="Optional description"
+        className="w-full p-2 border rounded-lg"
+        value={subtaskDesc}
+        onChange={(e) => setSubtaskDesc(e.target.value)}
+      />
+
+      <button
+        type="submit"
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition"
+      >
+        Add
+      </button>
+    </form>
+  </div>
+) : (
+  /* ================= ATTACHMENTS TAB ================= */
+  <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {attachments.length === 0 ? (
+        <p className="col-span-2 text-center py-8 text-gray-400 text-sm">
+          No attachments yet.
+        </p>
+      ) : (
+        attachments.map((att) => (
+          <div
+            key={att.attechment_id}
+            className="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-lg"
+          >
+            <div className="flex items-center gap-3 overflow-hidden">
+              <i className="fa-solid fa-file text-blue-500"></i>
+
+              <span
+                className="text-sm font-medium truncate"
+                title={att.file_path}
+              >
+                {att.file_path.split('/').pop()}
+              </span>
             </div>
-          )}
+
+            <button
+              type="button"
+              onClick={async () => {
+                await api.deleteAttachment(att.attechment_id);
+                loadAll();
+              }}
+              className="text-red-400 hover:text-red-600"
+              title="Delete attachment"
+            >
+              <i className="fa-solid fa-trash-can text-sm"></i>
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+
+    {/* UPLOAD */}
+    <div className="flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-8 hover:bg-gray-50 transition">
+      <label className="cursor-pointer text-center">
+        <i className="fa-solid fa-cloud-arrow-up text-3xl text-gray-300 mb-2"></i>
+        <p className="text-sm text-gray-500 font-medium">
+          Click to upload files
+        </p>
+        <input
+          type="file"
+          className="hidden"
+          onChange={uploadAttachment}
+        />
+      </label>
+    </div>
+  </div>
+)}
+
         </div>
       </div>
     </div>

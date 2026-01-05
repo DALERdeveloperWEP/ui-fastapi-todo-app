@@ -36,6 +36,7 @@ export interface CategoryResponse {
 }
 
 export interface SubTaskResponse {
+  user_id: number;
   sub_task_id: number;
   name: string;
   description: string | null;
@@ -43,6 +44,7 @@ export interface SubTaskResponse {
 }
 
 export interface AttachmentResponse {
+  user_id: number;
   attechment_id: number;
   file_path: string;
   task_id: number;

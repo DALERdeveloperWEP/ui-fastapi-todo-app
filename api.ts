@@ -1,7 +1,8 @@
 
 import { AuthResponse } from './types';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'https://fastapi-todo-dog9.onrender.com';
+// const BASE_URL = 'http://localhost:8000';
 
 const getHeaders = (isMultipart = false) => {
   const token = localStorage.getItem('access_token');
@@ -154,6 +155,11 @@ export const api = {
     return response.json();
   },
 
+  async getSubtasks(taskId: number) {
+    const response = await fetch(`${BASE_URL}/api/subtask/user_subtasks`, { headers: getHeaders() });
+    return response.json();
+  },
+
   async createSubtask(data: any) {
     const response = await fetch(`${BASE_URL}/api/subtask/`, {
       method: 'POST',
@@ -181,15 +187,27 @@ export const api = {
 
   async createAttachment(formData: FormData) {
     const response = await fetch(`${BASE_URL}/api/attechment/`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: formData
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+      },
+      body: formData,
     });
+
     return response.json();
   },
 
   async getAttachment(id: number) {
     const response = await fetch(`${BASE_URL}/api/attechment/${id}`, { headers: getHeaders() });
+    return response.json();
+  },
+
+  async getUserAttachments() {
+    const response = await fetch(
+      `${BASE_URL}/api/attechment/user_attechments`,
+      { headers: getHeaders() }
+    );
+    if (!response.ok) throw new Error('Failed to fetch attachments');
     return response.json();
   },
 
